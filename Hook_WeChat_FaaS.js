@@ -79,13 +79,16 @@ function CallWX(appid, jsapi_name, data) {
 
 Java.perform(function () {
 
-        let v = Java.use("com.tencent.mm.plugin.appbrand.v");
+        let v = Java.use("com.tencent.mm.plugin.appbrand.y");
+        let AppId = "";
         v["getAppId"].implementation = function () {
             AppId = this["getAppId"]();
             return AppId;
         };
 
+
         let AppBrandCommonBindingJni = Java.use("com.tencent.mm.appbrand.commonjni.AppBrandCommonBindingJni");
+        console.log("hooking: AppBrandCommonBindingJni");
         AppBrandCommonBindingJni["nativeInvokeHandler"].implementation = function (jsapi_name, data, str3, asyncRequestCounter, z15) {
             CallWX_asyncRequestCounter = asyncRequestCounter;
             console.log(`[${AppId}] [${asyncRequestCounter}] == \x1b[36m[requests]\x1b[0m: jsapi_name=${jsapi_name}, data=${data}, str3=${str3}, z15=${z15}`);
@@ -94,6 +97,7 @@ Java.perform(function () {
         };
 
         let AppBrandJsBridgeBinding = Java.use('com.tencent.mm.appbrand.commonjni.AppBrandJsBridgeBinding');
+        console.log("hooking: AppBrandJsBridgeBinding");
         AppBrandJsBridgeBinding['invokeCallbackHandler'].implementation = function (asyncRequestCounter, res) {
             console.log(`[${AppId}] [${asyncRequestCounter}] == \x1b[32m[response]\x1b[0m: ${res}`)
 

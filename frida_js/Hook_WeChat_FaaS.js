@@ -79,7 +79,7 @@ function CallWX(appid, jsapi_name, data) {
 
 Java.perform(function () {
 
-        let v = Java.use("com.tencent.mm.plugin.appbrand.v");
+        let v = Java.use("com.tencent.mm.plugin.appbrand.y");
         v["getAppId"].implementation = function () {
             if (Call_AppId === null) {
                 AppId = this["getAppId"]();
