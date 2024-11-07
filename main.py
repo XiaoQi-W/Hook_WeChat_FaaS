@@ -4,6 +4,7 @@ import time
 import os
 
 import frida
+import requests
 from flask import Flask, jsonify
 from loguru import logger
 
@@ -120,32 +121,42 @@ class WeChatApi(Frida_Server):
 
     def tcbapi_get_service_info2(self):
         tid = self.get_tid()
-        return self.CallWX(self.appid, 'operateWXData', self.json_dumps_blank_space({
-            "keepAlive": True,
-            "data": {
-                "api_name": "qbase_commapi",
-                "data": {
-                    "qbase_api_name": "tcbapi_get_service_info",
-                    "qbase_req": "{\"system\":\"Android 10\",\"wx_app_version\":\"8.0.50\",\"scene\":3,\"domain\":\"a0c89d6ac-wxe17e6efa4c656fcd.tj.wxgateway.com\"}",
-                    "qbase_options": {
-                        "rand": f"0.{self.generate_random_number()}"
-                    },
-                    "qbase_meta": {
-                        "session_id": f"{tid}",  # 确保没有额外空格
-                        "sdk_version": "wx-miniprogram-sdk/3.5.8 (1728979288000 platform/android})",
-                        "filter_user_info": False
-                    },
-                    "cli_req_id": f"{tid+1}_0.{self.generate_random_number()}"
-                },
-                "operate_directly": False,
-                "tid": tid + 3,
-                "env": 1
+        tcbapi_get_service_info = {
+            "qbase_api_name": "tcbapi_get_service_info",
+            "qbase_req": "{\"system\":\"Android 10\",\"wx_app_version\":\"8.0.50\",\"scene\":3,\"domain\":\"a0c89d6ac-wxe17e6efa4c656fcd.tj.wxgateway.com\"}",
+            "qbase_meta": {
+                "session_id": f"{tid}",  # 确保没有额外空格
+                "sdk_version": "wx-miniprogram-sdk/3.5.8 (1728979288000 platform/android})",
+                "filter_user_info": False
             },
+            "cli_req_id": f"{tid + 1}_0.{self.generate_random_number()}"
+        }
+        qbase_commapi = {
+            "api_name": "qbase_commapi",
+            "data": tcbapi_get_service_info,
+            "operate_directly": False,
+            "tid": tid + 3,
+            "env": 1
+        }
+        url = "http://127.0.0.1:3000"
+        data = {
+            "data": self.json_dumps_blank_space(tcbapi_get_service_info),
+        }
+        space = self.json_dumps_blank_space(data)
+        # 发送 POST 请求，数据为 JSON 格式
+        response = requests.post(url, json=data)
+
+        qbase_commapi["data"]["qbase_options"] = {"qbase_options": {"rand": f"{response.json()["rand"]}"}}
+        data = {
+            "keepAlive": True,
+            "data": qbase_commapi,
             "timeout": 60000,
             "requestInQueue": False,
             "isImportant": False,
             "useQuic": False
-        }))
+        }
+
+        return self.CallWX(self.appid, 'operateWXData', self.json_dumps_blank_space(data))
 
     def sendOrder(self):
         return self.CallWX(self.appid, 'operateWXData', self.json_dumps_blank_space({
