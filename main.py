@@ -119,6 +119,24 @@ class WeChatApi(Frida_Server):
             "useQuic": False
         }))
 
+    def get_auth(self):
+        return self.CallWX(self.appid, 'operateWXData', self.json_dumps_blank_space(
+            {
+                "keepAlive": True,
+                "data": {
+                    "api_name": "webapi_getuserencryptkey",
+                    "data": {},
+                    "operate_directly": False,
+                    "showApiVersion": False,
+                    "tid": self.get_tid(),
+                },
+                "timeout": 60000,
+                "requestInQueue": False,
+                "isImportant": False,
+                "useQuic": False
+            }
+        ))
+
     def tcbapi_get_service_info2(self):
         tid = self.get_tid()
         tcbapi_get_service_info = {
@@ -142,11 +160,10 @@ class WeChatApi(Frida_Server):
         data = {
             "data": self.json_dumps_blank_space(tcbapi_get_service_info),
         }
-        space = self.json_dumps_blank_space(data)
         # 发送 POST 请求，数据为 JSON 格式
         response = requests.post(url, json=data)
-
-        qbase_commapi["data"]["qbase_options"] = {"qbase_options": {"rand": f"{response.json()["rand"]}"}}
+        logger.info(f"response: {response.json()}")
+        qbase_commapi["data"]["qbase_options"] = {"rand": f"{response.json()["rand"]}"}
         data = {
             "keepAlive": True,
             "data": qbase_commapi,
@@ -220,6 +237,15 @@ def get_token2():
 @app.route('/sendOrder', methods=['GET'])
 def send_order():
     order_sent = wx.sendOrder()  # 假设这是发送订单的逻辑
+    if order_sent:
+        return jsonify({"message": "Order sent successfully", "data": order_sent})
+    else:
+        return jsonify({"message": "Failed to send order"}), 400
+
+
+@app.route('/getAuth', methods=['GET'])
+def get_auth():
+    order_sent = wx.get_auth()  # 假设这是发送订单的逻辑
     if order_sent:
         return jsonify({"message": "Order sent successfully", "data": order_sent})
     else:
