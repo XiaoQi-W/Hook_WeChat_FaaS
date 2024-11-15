@@ -65,7 +65,7 @@ function CallWX(appid, jsapi_name, data) {
                 }
 
 
-                instance.nativeInvokeHandler(jsapi_name, data, '{}', CallWX_asyncRequestCounter, true)
+                instance.nativeInvokeHandler(jsapi_name, data, '{}', CallWX_asyncRequestCounter, true,0)
 
             },
             onComplete: function () {
@@ -104,8 +104,9 @@ Java.perform(function () {
         // };
 
 
-        let AppBrandCommonBindingJni = Java.use("com.tencent.mm.appbrand.commonjni.AppBrandCommonBindingJni");
-        AppBrandCommonBindingJni["nativeInvokeHandler"].implementation = function (jsapi_name, data, str3, asyncRequestCounter, z15) {
+        var AppBrandCommonBindingJni = Java.use("com.tencent.mm.appbrand.commonjni.AppBrandCommonBindingJni");
+
+        AppBrandCommonBindingJni.nativeInvokeHandler.implementation = function (jsapi_name, data, str3, asyncRequestCounter, z15, i17) {
             CallWX_asyncRequestCounter = asyncRequestCounter;
             // console.log(`[${AppId}] [${asyncRequestCounter}] == \x1b[36m[requests]\x1b[0m: jsapi_name=${jsapi_name}, data=${data}, str3=${str3}, z15=${z15}`);
             send(JSON.stringify({
@@ -117,19 +118,20 @@ Java.perform(function () {
                 str3: str3,
                 z15: z15
             }))
-            return this["nativeInvokeHandler"](jsapi_name, data, str3, asyncRequestCounter, z15);
+               return this.nativeInvokeHandler(jsapi_name, data, str3, asyncRequestCounter, z15, i17);
         };
 
-        let AppBrandJsBridgeBinding = Java.use('com.tencent.mm.appbrand.commonjni.AppBrandJsBridgeBinding');
-        AppBrandJsBridgeBinding['invokeCallbackHandler'].implementation = function (asyncRequestCounter, res) {
+        var AppBrandJsBridgeBinding = Java.use("com.tencent.mm.appbrand.commonjni.AppBrandJsBridgeBinding");
+
+        AppBrandJsBridgeBinding.invokeCallbackHandler.overload('int', 'java.lang.String', 'java.lang.String').implementation = function (i16, str, str2) {
             // console.log(`[${AppId}] [${asyncRequestCounter}] == \x1b[32m[response]\x1b[0m: ${res}`)
             send(JSON.stringify({
                 type: 'response',
                 AppId: AppId,
-                asyncRequestCounter: asyncRequestCounter,
-                res: res
+                asyncRequestCounter: i16,
+                res: str
             }))
-            this['invokeCallbackHandler'](asyncRequestCounter, res)
+             this.invokeCallbackHandler(i16, str, str2);
         }
 
     }

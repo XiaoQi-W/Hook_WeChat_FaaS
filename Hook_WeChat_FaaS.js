@@ -65,7 +65,7 @@ function CallWX(appid, jsapi_name, data) {
                 }
 
 
-                instance.nativeInvokeHandler(jsapi_name, data, '{}', CallWX_asyncRequestCounter, true)
+                instance.nativeInvokeHandler(jsapi_name, data, '{}', CallWX_asyncRequestCounter, true, 0)
 
             },
             onComplete: function () {
@@ -87,21 +87,25 @@ Java.perform(function () {
         };
 
 
-        let AppBrandCommonBindingJni = Java.use("com.tencent.mm.appbrand.commonjni.AppBrandCommonBindingJni");
-        console.log("hooking: AppBrandCommonBindingJni");
-        AppBrandCommonBindingJni["nativeInvokeHandler"].implementation = function (jsapi_name, data, str3, asyncRequestCounter, z15) {
+        // 获取 AppBrandCommonBindingJni 类
+        var AppBrandCommonBindingJni = Java.use("com.tencent.mm.appbrand.commonjni.AppBrandCommonBindingJni");
+
+        // Hook nativeInvokeHandler 方法
+        AppBrandCommonBindingJni.nativeInvokeHandler.implementation = function (jsapi_name, data, str3, asyncRequestCounter, z15, i17) {
             CallWX_asyncRequestCounter = asyncRequestCounter;
             console.log(`[${AppId}] [${asyncRequestCounter}] == \x1b[36m[requests]\x1b[0m: jsapi_name=${jsapi_name}, data=${data}, str3=${str3}, z15=${z15}`);
 
-            return this["nativeInvokeHandler"](jsapi_name, data, str3, asyncRequestCounter, z15);
+            return this.nativeInvokeHandler(jsapi_name, data, str3, asyncRequestCounter, z15, i17);
         };
 
-        let AppBrandJsBridgeBinding = Java.use('com.tencent.mm.appbrand.commonjni.AppBrandJsBridgeBinding');
-        console.log("hooking: AppBrandJsBridgeBinding");
-        AppBrandJsBridgeBinding['invokeCallbackHandler'].implementation = function (asyncRequestCounter, res) {
-            console.log(`[${AppId}] [${asyncRequestCounter}] == \x1b[32m[response]\x1b[0m: ${res}`)
+        // Hook invokeCallbackHandler 方法
+        var AppBrandJsBridgeBinding = Java.use("com.tencent.mm.appbrand.commonjni.AppBrandJsBridgeBinding");
 
-            this['invokeCallbackHandler'](asyncRequestCounter, res)
+        // 使用 overload hook 方法
+        AppBrandJsBridgeBinding.invokeCallbackHandler.overload('int', 'java.lang.String', 'java.lang.String').implementation = function (i16, str, str2) {
+            console.log(`[${AppId}] [${i16}] == \x1b[32m[response]\x1b[0m: ${str}`)
+
+            this.invokeCallbackHandler(i16, str, str2);
         }
 
     }

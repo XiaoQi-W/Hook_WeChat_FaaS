@@ -19,6 +19,7 @@ class Frida_Server(DataStore):
 
         current_dir_path = os.path.dirname(os.path.abspath(__file__))
         with open(f'{current_dir_path}/frida_js/Hook_WeChat_FaaS.js', 'r') as f:
+        # with open(f'{current_dir_path}/frida_js/Hook_WeChat_FaaS-849.js', 'r') as f:
             hook_code = f.read()
 
         # 连接到设备
@@ -224,14 +225,14 @@ app = Flask(__name__)
 def get_token():
     info = wx.tcbapi_get_service_info()
     res = json.loads(info["res"])
-    return json.loads(res["data"])
+    return json.loads(res["data"])["data"]
 
 
 @app.route('/getToken2', methods=['GET'])
 def get_token2():
     info = wx.tcbapi_get_service_info2()
     res = json.loads(info["res"])
-    return json.loads(res["data"])
+    return json.loads(res["data"])["data"]
 
 
 @app.route('/sendOrder', methods=['GET'])
@@ -245,11 +246,13 @@ def send_order():
 
 @app.route('/getAuth', methods=['GET'])
 def get_auth():
-    order_sent = wx.get_auth()  # 假设这是发送订单的逻辑
-    if order_sent:
-        return jsonify({"message": "Order sent successfully", "data": order_sent})
+    auth = wx.get_auth()  # 假设这是发送订单的逻辑
+    if auth:
+        data_ = json.loads(auth["res"])["data"]
+        data_ = json.loads(data_)["data"]
+        return jsonify({"message": "获取认证Key成功", "data": json.loads(data_)})
     else:
-        return jsonify({"message": "Failed to send order"}), 400
+        return jsonify({"message": "Failed to send Auth"}), 400
 
 
 if __name__ == '__main__':
