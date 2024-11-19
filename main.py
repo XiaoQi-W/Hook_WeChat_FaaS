@@ -15,8 +15,9 @@ import start_device
 
 class Frida_Server(DataStore):
 
-    def __init__(self):
+    def __init__(self,device):
         super().__init__()
+        self.device = device
 
         current_dir_path = os.path.dirname(os.path.abspath(__file__))
         with open(f'{current_dir_path}/frida_js/Hook_WeChat_FaaS.js', 'r') as f:
@@ -24,7 +25,6 @@ class Frida_Server(DataStore):
             hook_code = f.read()
 
         # 连接到设备
-        self.device = frida.get_usb_device()  # 通过USB连接设备
         # device = frida.get_device_manager().add_remote_device('192.168.0.72:5555')
         AppBrandUI_pid = tools.get_pid(self.device.id, 'com.tencent.mm/.plugin.appbrand.ui.AppBrandUI')
         if not AppBrandUI_pid:
@@ -73,9 +73,11 @@ class Frida_Server(DataStore):
 
 class WeChatApi(Frida_Server):
 
-    def __init__(self, appid):
-        super().__init__()
+    def __init__(self, appid,device):
+        super().__init__(device = device)
         self.appid = appid
+        self.device = device
+
 
     @staticmethod
     def get_tid():
@@ -165,7 +167,7 @@ class WeChatApi(Frida_Server):
         # 发送 POST 请求，数据为 JSON 格式
         response = requests.post(url, json=data)
         logger.info(f"response: {response.json()}")
-        qbase_commapi["data"]["qbase_options"] = {"rand": f"{response.json()["rand"]}"}
+        qbase_commapi["data"]["qbase_options"] = {"rand": f"{response.json()['rand']}"}
         data = {
             "keepAlive": True,
             "data": qbase_commapi,
@@ -276,12 +278,13 @@ def get_token():
             print("启动小程序完毕")
             time.sleep(5)
             # 调用微信API 获取服务信息
-            wx = WeChatApi(appid='wx9627eb7f4b1c69d5')
+            wx = WeChatApi(appid='wx9627eb7f4b1c69d5',device= device)
             print("启动hook")
             time.sleep(5)
 
             # 获取服务信息
             info = wx.tcbapi_get_service_info()
+            wx.close()
             res = json.loads(info["res"])
 
             # 返回解析后的结果
