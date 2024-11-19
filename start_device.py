@@ -2,10 +2,12 @@ import subprocess
 import time
 
 
-def run_adb_command(command):
+def run_adb_command(command, device_id=None):
     """
     运行 ADB 命令的通用函数
     """
+    if device_id:
+        command = f"adb -s {device_id} {command}"  # 指定设备 ID
     result = subprocess.run(command, shell=True, capture_output=True, text=True)
     if result.returncode == 0:
         return result.stdout.strip()
@@ -14,45 +16,44 @@ def run_adb_command(command):
         return None
 
 
-def is_screen_on():
+def is_screen_on(device_id=None):
     """
     检查屏幕是否点亮
     """
-    output = run_adb_command("adb shell dumpsys power")
+    output = run_adb_command("shell dumpsys power", device_id)
     if output:
         # 根据返回内容判断屏幕状态
         return "mScreenOn=true" in output or "Display Power: state=ON" in output
     return False
 
 
-def wake_up_device():
+def wake_up_device(device_id=None):
     """
     唤醒设备并解锁
     """
     # 唤醒屏幕
-    run_adb_command("adb shell input keyevent 26")  # 按电源键
+    run_adb_command("shell input keyevent 26", device_id)  # 按电源键
     time.sleep(1)
     # 模拟滑动解锁
-    run_adb_command("adb shell input swipe 500 1500 500 500")  # 根据设备分辨率调整
+    run_adb_command("shell input swipe 500 1500 500 500", device_id)  # 根据设备分辨率调整
 
-
-def unlock_and_prepare_device():
+def unlock_and_prepare_device(device_id=None):
     """
     解锁设备，确保屏幕点亮
     """
-    if is_screen_on():
+    if is_screen_on(device_id):
         print("屏幕已点亮，无需唤醒。")
     else:
         print("屏幕未点亮，正在唤醒设备...")
-        wake_up_device()
+        wake_up_device(device_id)
 
 
-def get_wechat_packages():
+def get_wechat_packages(device_id=None):
     """
     获取设备上所有的微信包名
     """
-    command = "adb shell pm list packages"
-    result = run_adb_command(command)
+    command = "shell pm list packages"
+    result = run_adb_command(command, device_id)
     if result:  # 确保结果不为空
         packages = [
             line.split(":")[1]
@@ -64,15 +65,15 @@ def get_wechat_packages():
         return []
 
 
-def open_wechat(package_name):
+def open_wechat(package_name, device_id=None):
     """
     打开指定包名的微信
     """
     print(f"启动微信：{package_name}")
-    run_adb_command(f"adb shell monkey -p {package_name} -c android.intent.category.LAUNCHER 1")
+    run_adb_command(f"shell monkey -p {package_name} -c android.intent.category.LAUNCHER 1", device_id)
 
 
-def open_wechat_mini_program(appid, path=""):
+def open_wechat_mini_program(appid, path="", device_id=None):
     """
     使用 URL 启动微信小程序
     :param appid: 小程序的 AppId
@@ -80,12 +81,12 @@ def open_wechat_mini_program(appid, path=""):
     """
     url = f"weixin://dl/business/?appid={appid}&path={path}"
     print(f"启动微信小程序: {url}")
-    run_adb_command(f'adb shell am start -a android.intent.action.VIEW -d "{url}"')
+    run_adb_command(f'shell am start -a android.intent.action.VIEW -d "{url}"', device_id)
 
 
-def get_screen_resolution():
+def get_screen_resolution(device_id=None):
     """获取设备的屏幕分辨率"""
-    result = subprocess.run("adb shell wm size", shell=True, capture_output=True, text=True)
+    result = subprocess.run(f"adb -s {device_id} shell wm size", shell=True, capture_output=True, text=True)
     if result.returncode == 0:
         size = result.stdout.strip().split(": ")[1]
         width, height = map(int, size.split("x"))
@@ -94,10 +95,10 @@ def get_screen_resolution():
         return None
 
 
-def swipe_by_percentage(start_x_pct, start_y_pct, end_x_pct, end_y_pct):
+def swipe_by_percentage(start_x_pct, start_y_pct, end_x_pct, end_y_pct, device_id=None):
     """根据百分比坐标进行滑动"""
     # 获取屏幕分辨率
-    width, height = get_screen_resolution()
+    width, height = get_screen_resolution(device_id)
     if width is None or height is None:
         print("无法获取设备分辨率")
         return
@@ -109,15 +110,15 @@ def swipe_by_percentage(start_x_pct, start_y_pct, end_x_pct, end_y_pct):
     end_y = int(height * end_y_pct)
 
     # 执行 ADB 滑动命令
-    command = f"adb shell input swipe {start_x} {start_y} {end_x} {end_y}"
+    command = f"adb -s {device_id} shell input swipe {start_x} {start_y} {end_x} {end_y}" if device_id else f"adb shell input swipe {start_x} {start_y} {end_x} {end_y}"
     subprocess.run(command, shell=True)
     print(f"执行滑动：{command}")
 
 
-def click_by_percentage(x_pct, y_pct):
+def click_by_percentage(x_pct, y_pct, device_id=None):
     """根据百分比坐标进行点击"""
     # 获取屏幕分辨率
-    width, height = get_screen_resolution()
+    width, height = get_screen_resolution(device_id)
     if width is None or height is None:
         print("无法获取设备分辨率")
         return
@@ -127,14 +128,12 @@ def click_by_percentage(x_pct, y_pct):
     y = int(height * y_pct)
 
     # 执行 ADB 点击命令
-    command = f"adb shell input tap {x} {y}"
+    command = f"adb -s {device_id} shell input tap {x} {y}" if device_id else f"adb shell input tap {x} {y}"
     subprocess.run(command, shell=True)
     print(f"执行点击：{command}")
 
 
 if __name__ == "__main__":
-    mini_program_appid = "wx9627eb7f4b1c69d5"
-    mini_program_path = "packages/svip"
     print("检查设备屏幕状态...")
     unlock_and_prepare_device()
 

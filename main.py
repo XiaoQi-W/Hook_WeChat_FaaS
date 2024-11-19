@@ -10,6 +10,7 @@ from loguru import logger
 
 import tools
 from tools.asyncRequestQueue import DataStore
+import start_device
 
 
 class Frida_Server(DataStore):
@@ -220,13 +221,105 @@ class WeChatApi(Frida_Server):
 
 app = Flask(__name__)
 
+from flask import request, jsonify
+import frida
+import json
+import time
+
 
 @app.route('/getToken', methods=['GET'])
 def get_token():
-    info = wx.tcbapi_get_service_info()
-    res = json.loads(info["res"])
-    return json.loads(res["data"])["data"]
+    # 获取传入的 deviceId
+    device_id = request.args.get('deviceId')
 
+    if not device_id:
+        return jsonify({"error": "deviceId is required"}), 400
+
+    try:
+        # 获取设备管理器
+        device_manager = frida.get_device_manager()
+
+        # 通过 deviceId 查找对应的设备
+        device = device_manager.get_device(device_id)
+
+        if not device:
+            return jsonify({"error": f"Device with ID {device_id} not found"}), 404
+
+        print(f"连接到设备: {device.name} ({device.id})")
+
+        # 解锁设备并准备好设备
+        print("检查设备屏幕状态...")
+        start_device.unlock_and_prepare_device(device_id)
+
+        # 获取所有微信包名
+        print("检测设备上的微信多开实例...")
+        wechat_packages = start_device.get_wechat_packages(device_id)
+
+        if not wechat_packages:
+            print("未检测到微信相关应用。")
+            return jsonify({"error": "No WeChat packages found on the device"}), 404
+        else:
+            print("检测到以下微信包名：")
+            for i, pkg in enumerate(wechat_packages):
+                print(f"{i + 1}: {pkg}")
+
+            selected_package = wechat_packages[0]  # 选择第一个微信包
+            start_device.open_wechat(selected_package,device_id)  # 打开微信
+            time.sleep(3)
+
+            # 模拟滑动
+            start_device.swipe_by_percentage(0.5, 0.5, 0.4, 0.9,device_id)
+            time.sleep(3)
+
+            # 模拟点击
+            start_device.click_by_percentage(0.18, 0.6,device_id)
+            print("启动小程序完毕")
+            time.sleep(5)
+            # 调用微信API 获取服务信息
+            wx = WeChatApi(appid='wx9627eb7f4b1c69d5')
+            print("启动hook")
+            time.sleep(5)
+
+            # 获取服务信息
+            info = wx.tcbapi_get_service_info()
+            res = json.loads(info["res"])
+
+            # 返回解析后的结果
+            return jsonify(json.loads(res["data"])["data"])
+
+    except frida.DeviceNotFoundError:
+        return jsonify({"error": f"Device with ID {device_id} not found"}), 404
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route('/select_device', methods=['GET'])
+def select_device():
+    device_manager = frida.get_device_manager()
+    devices = device_manager.enumerate_devices()
+
+    # 打印所有设备信息
+    usb_devices = [device for device in devices if device.type == 'usb']
+
+    # 选择第一个设备
+    selected_device = devices[0]
+    if usb_devices:
+        for i, device in enumerate(usb_devices):
+            print(f"{i + 1}: Device ID: {device.id}, Device Name: {device.name}")
+    else:
+        print("没有找到 USB 设备")
+
+    # 转换为可以序列化的字典列表
+    serializable_devices = [{
+        'id': device.id,
+        'name': device.name,
+        'type': device.type
+    } for device in usb_devices]
+
+    return jsonify({
+        "message": "Selected device successfully",
+        "devices": serializable_devices
+    })
 
 @app.route('/getToken2', methods=['GET'])
 def get_token2():
@@ -256,5 +349,4 @@ def get_auth():
 
 
 if __name__ == '__main__':
-    wx = WeChatApi(appid='wx9627eb7f4b1c69d5')
     app.run(host='0.0.0.0', port=5000)  # 监听所有地址，端口5000
