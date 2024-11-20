@@ -326,6 +326,17 @@ def select_device():
 
 @app.route('/getToken2', methods=['GET'])
 def get_token2():
+    # 获取传入的 deviceId
+    device_id = request.args.get('deviceId')
+
+    if not device_id:
+        return jsonify({"error": "deviceId is required"}), 400
+
+    # 获取设备管理器
+    device_manager = frida.get_device_manager()
+    # 通过 deviceId 查找对应的设备
+    device = device_manager.get_device(device_id)
+    wx = WeChatApi(appid='wx9627eb7f4b1c69d5', device=device)
     info = wx.tcbapi_get_service_info2()
     res = json.loads(info["res"])
     return json.loads(res["data"])["data"]
@@ -333,6 +344,17 @@ def get_token2():
 
 @app.route('/sendOrder', methods=['GET'])
 def send_order():
+    # 获取传入的 deviceId
+    device_id = request.args.get('deviceId')
+
+    if not device_id:
+        return jsonify({"error": "deviceId is required"}), 400
+
+    # 获取设备管理器
+    device_manager = frida.get_device_manager()
+    # 通过 deviceId 查找对应的设备
+    device = device_manager.get_device(device_id)
+    wx = WeChatApi(appid='wx9627eb7f4b1c69d5', device=device)
     order_sent = wx.sendOrder()  # 假设这是发送订单的逻辑
     if order_sent:
         return jsonify({"message": "Order sent successfully", "data": order_sent})
@@ -342,6 +364,17 @@ def send_order():
 
 @app.route('/getAuth', methods=['GET'])
 def get_auth():
+    # 获取传入的 deviceId
+    device_id = request.args.get('deviceId')
+
+    if not device_id:
+        return jsonify({"error": "deviceId is required"}), 400
+
+    # 获取设备管理器
+    device_manager = frida.get_device_manager()
+    # 通过 deviceId 查找对应的设备
+    device = device_manager.get_device(device_id)
+    wx = WeChatApi(appid='wx9627eb7f4b1c69d5', device=device)
     auth = wx.get_auth()  # 假设这是发送订单的逻辑
     if auth:
         data_ = json.loads(auth["res"])["data"]
